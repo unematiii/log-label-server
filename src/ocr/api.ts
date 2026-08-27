@@ -1,3 +1,5 @@
+import { TypeCompiler } from '@sinclair/typebox/compiler';
+
 import { ExtractNutritionResponseSchema } from './schemas.js';
 import type {
   ExtractNutritionBody,
@@ -7,14 +9,13 @@ import type {
 type MistralConversationResponse = {
   outputs?: Array<{
     type?: string;
-    content?:
-      | string
-      | Array<{
-          type?: string;
-          text?: string;
-        }>;
+    content?: string;
   }>;
 };
+
+const ExtractNutritionResponseValidator = TypeCompiler.Compile(
+  ExtractNutritionResponseSchema
+);
 
 export async function extractNutrition(
   input: ExtractNutritionBody,
@@ -100,25 +101,9 @@ export async function extractNutrition(
 function getMistralOutputContent(
   response: MistralConversationResponse
 ): string | undefined {
-  const output = response.outputs
-    ?.slice()
-    .reverse()
-    .find((item) => item.type === 'message.output' || item.type === undefined);
-
-  if (typeof output?.content === 'string') {
-    return output.content;
-  }
-
-  if (Array.isArray(output?.content)) {
-    const text = output.content
-      .filter((chunk) => chunk.type === 'text' || chunk.type === undefined)
-      .map((chunk) => chunk.text ?? '')
-      .join('');
-
-    return text || undefined;
-  }
-
-  return undefined;
+  return response.outputs?.findLast(
+    (output) => output.type === 'message.output'
+  )?.content;
 }
 
 function applyNutritionSanityChecks(
@@ -168,47 +153,5 @@ function applyNutritionSanityChecks(
 function isExtractedNutrition(
   value: unknown
 ): value is ExtractNutritionResponse {
-  if (!isRecord(value)) {
-    return false;
-  }
-
-  const numericFields = [
-    'basisAmount',
-    'servingAmount',
-    'energyKj',
-    'energyKcal',
-    'fatG',
-    'saturatedFatG',
-    'carbohydratesG',
-    'sugarsG',
-    'fibreG',
-    'proteinG',
-    'saltG',
-    'sodiumMg',
-  ];
-
-  const numbersAreValid = numericFields.every(
-    (field) =>
-      value[field] === null ||
-      (typeof value[field] === 'number' &&
-        Number.isFinite(value[field]) &&
-        value[field] >= 0)
-  );
-
-  const basisUnitIsValid =
-    value.basisUnit === null ||
-    value.basisUnit === 'g' ||
-    value.basisUnit === 'ml' ||
-    value.basisUnit === 'serving';
-
-  const servingUnitIsValid =
-    value.servingUnit === null ||
-    value.servingUnit === 'g' ||
-    value.servingUnit === 'ml';
-
-  return numbersAreValid && basisUnitIsValid && servingUnitIsValid;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
+  return ExtractNutritionResponseValidator.Check(value);
 }
