@@ -4,12 +4,15 @@ import type {
   ExtractNutritionResponse,
 } from './types.js';
 
-type LlamaChatCompletion = {
-  choices?: Array<{
-    message?: {
-      content?: string;
-    };
-    finish_reason?: string;
+type MistralConversationResponse = {
+  outputs?: Array<{
+    type?: string;
+    content?:
+      | string
+      | Array<{
+          type?: string;
+          text?: string;
+        }>;
   }>;
 };
 
@@ -21,47 +24,46 @@ export async function extractNutrition(
   }
 ): Promise<ExtractNutritionResponse> {
   const baseUrl =
-    options?.baseUrl ?? process.env.LLAMA_BASE_URL ?? 'http://127.0.0.1:8080';
+    options?.baseUrl ??
+    process.env.MISTRAL_BASE_URL ??
+    'https://api.mistral.ai';
 
   const normalizedInput: ExtractNutritionBody['fullText'] =
     input.fullText.trim();
 
   const body = JSON.stringify({
-    model: process.env.LLAMA_MODEL ?? 'qwen3-1.7b',
-
-    messages: [
+    model: 'ministral-3b-latest',
+    inputs: [
       {
         role: 'user',
         content: [
-          '/no_think',
           'Extract nutrition information from this OCR result:',
           JSON.stringify(normalizedInput),
         ].join('\n\n'),
       },
     ],
-
-    response_format: {
-      type: 'json_schema',
-      json_schema: {
-        name: 'nutrition_label',
-        strict: true,
-        schema: ExtractNutritionResponseSchema,
+    instructions: `Do not deviate from the response schema. Where data is missing, supply null value.`,
+    completion_args: {
+      temperature: 0.7,
+      max_tokens: 4096,
+      top_p: 1,
+      response_format: {
+        type: 'json_schema',
+        json_schema: {
+          name: 'response_schema',
+          schema_definition: ExtractNutritionResponseSchema,
+          strict: true,
+        },
       },
     },
-
-    chat_template_kwargs: {
-      enable_thinking: false,
-    },
-
-    temperature: 0,
-    max_tokens: 800,
-    stream: false,
+    tools: [],
   });
 
-  const response = await fetch(`${baseUrl}/v1/chat/completions`, {
+  const response = await fetch(`${baseUrl}/v1/conversations`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      Authorization: `Bearer ${process.env.MISTRAL_API_KEY}`,
     },
     signal: options?.signal || null,
     body,
@@ -70,22 +72,14 @@ export async function extractNutrition(
   if (!response.ok) {
     const responseBody = await response.text();
 
-    throw new Error(
-      `llama-server returned ${response.status}: ${responseBody}`
-    );
+    throw new Error(`Mistral API returned ${response.status}: ${responseBody}`);
   }
 
-  const completion = (await response.json()) as LlamaChatCompletion;
-
-  const choice = completion.choices?.[0];
-  const content = choice?.message?.content;
+  const conversation = (await response.json()) as MistralConversationResponse;
+  const content = getMistralOutputContent(conversation);
 
   if (!content) {
-    throw new Error(
-      `llama-server returned no content. Finish reason: ${
-        choice?.finish_reason ?? 'unknown'
-      }`
-    );
+    throw new Error('Mistral API returned no message output content');
   }
 
   let parsed: unknown;
@@ -93,14 +87,38 @@ export async function extractNutrition(
   try {
     parsed = JSON.parse(content);
   } catch {
-    throw new Error(`llama-server returned invalid JSON: ${content}`);
+    throw new Error(`Mistral API returned invalid JSON: ${content}`);
   }
 
   if (!isExtractedNutrition(parsed)) {
-    throw new Error(`llama-server returned an unexpected result: ${content}`);
+    throw new Error(`Mistral API returned an unexpected result: ${content}`);
   }
 
   return applyNutritionSanityChecks(parsed);
+}
+
+function getMistralOutputContent(
+  response: MistralConversationResponse
+): string | undefined {
+  const output = response.outputs
+    ?.slice()
+    .reverse()
+    .find((item) => item.type === 'message.output' || item.type === undefined);
+
+  if (typeof output?.content === 'string') {
+    return output.content;
+  }
+
+  if (Array.isArray(output?.content)) {
+    const text = output.content
+      .filter((chunk) => chunk.type === 'text' || chunk.type === undefined)
+      .map((chunk) => chunk.text ?? '')
+      .join('');
+
+    return text || undefined;
+  }
+
+  return undefined;
 }
 
 function applyNutritionSanityChecks(
