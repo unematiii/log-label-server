@@ -1,0 +1,44 @@
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    environment:
+      PGHOST: database
+      PGPORT: 5432
+      PGDATABASE: label_log
+      PGUSER: label_log
+      PGPASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      MISTRAL_API_KEY: ${MISTRAL_API_KEY:?set MISTRAL_API_KEY in .env}
+      AUTH_CODE_SECRET: ${AUTH_CODE_SECRET:?set AUTH_CODE_SECRET in .env}
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
+      SMTP_HOST: ${SMTP_HOST:?set SMTP_HOST in .env}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      SMTP_USER: ${SMTP_USER:?set SMTP_USER in .env}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:?set SMTP_PASSWORD in .env}
+      SMTP_FROM: ${SMTP_FROM:?set SMTP_FROM in .env}
+      NODE_ENV: production
+      PORT: 3000
+    depends_on:
+      database:
+        condition: service_healthy
+    ports:
+      - '${APP_BIND_IP:-127.0.0.1}:8080:3000'
+
+  database:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: label_log
+      POSTGRES_USER: label_log
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U label_log -d label_log]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:

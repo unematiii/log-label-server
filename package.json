@@ -17,18 +17,34 @@
     "build": "tsc -p tsconfig.prod.json",
     "build:watch": "tsc -p tsconfig.prod.json -w",
     "clean": "rm -rf dist .tsbuildinfo",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:studio": "drizzle-kit studio",
+    "whitelist": "node ./dist/database/whitelist.js",
     "format": "prettier --write .",
     "start": "node ./dist/index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "devDependencies": {
     "@types/node": "^26.3.0",
+    "@types/nodemailer": "^8.0.1",
+    "drizzle-kit": "^0.31.10",
     "typescript": "^7.0.2"
   },
   "dependencies": {
+    "@fastify/rate-limit": "^11.2.0",
     "@sinclair/typebox": "^0.34.52",
+    "drizzle-orm": "^0.45.2",
     "fastify": "^5.12.1",
+    "jose": "^6.2.10",
+    "nodemailer": "^9.0.6",
     "pino-pretty": "^13.1.3",
+    "postgres": "^3.4.9",
     "prettier": "^3.9.6"
+  },
+  "allowScripts": {
+    "esbuild@0.18.20": true,
+    "esbuild@0.25.12": true,
+    "esbuild@0.28.2": true
   }
 }

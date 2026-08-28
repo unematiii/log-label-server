@@ -1,10 +1,12 @@
 import Fastify from 'fastify';
 
+import { closeDatabase, migrateDatabase } from './database/index.js';
 import { routes } from './routes.js';
 
 const fastify = Fastify({
+  trustProxy: true,
   logger: {
-    level: 'info',
+    level: process.env.NODE_ENV === 'production' ? 'warn' : 'info',
     transport: {
       target: 'pino-pretty',
       options: {
@@ -18,9 +20,22 @@ const fastify = Fastify({
 
 fastify.register(routes);
 
-fastify.listen({ port: 3000, host: '0.0.0.0' }, function (err, _address) {
-  if (err) {
-    fastify.log.error(err);
+fastify.addHook('onClose', async () => {
+  await closeDatabase();
+});
+
+async function start(): Promise<void> {
+  try {
+    await migrateDatabase();
+    await fastify.listen({
+      port: Number(process.env.PORT ?? 3000),
+      host: '0.0.0.0',
+    });
+  } catch (error) {
+    fastify.log.error(error);
+    await closeDatabase();
     process.exit(1);
   }
-});
+}
+
+void start();

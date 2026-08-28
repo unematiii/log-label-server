@@ -1,5 +1,6 @@
 import type { FastifyPluginAsync } from 'fastify';
 
+import { authenticateRequest } from '../auth/tokens.js';
 import { extractNutritionController } from './controller.js';
 import {
   ExtractNutritionBodySchema,
@@ -12,6 +13,7 @@ export const ocrRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post<ExtractNutritionRoute>(
     '/extract',
     {
+      preHandler: authenticateRequest,
       schema: {
         body: ExtractNutritionBodySchema,
         response: {
