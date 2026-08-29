@@ -15,7 +15,7 @@ starts.
 Add an email to the allowlist after the containers are running:
 
 ```sh
-docker compose exec app node dist/database/whitelist.js user@example.com
+docker compose exec app node dist/database/scripts/whitelist.js user@example.com
 ```
 
 ## Authentication

@@ -20,7 +20,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
-    "whitelist": "node ./dist/database/whitelist.js",
+    "whitelist": "node ./dist/database/scripts/whitelist.js",
     "format": "prettier --write .",
     "start": "node ./dist/index.js",
     "test": "echo \"Error: no test specified\" && exit 1"

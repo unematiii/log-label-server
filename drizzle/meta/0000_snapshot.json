@@ -35,9 +35,7 @@
         "allowed_emails_email_unique": {
           "name": "allowed_emails_email_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "email"
-          ]
+          "columns": ["email"]
         }
       },
       "policies": {},
@@ -140,12 +138,8 @@
           "name": "email_jobs_login_code_id_login_codes_id_fk",
           "tableFrom": "email_jobs",
           "tableTo": "login_codes",
-          "columnsFrom": [
-            "login_code_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["login_code_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -233,12 +227,8 @@
           "name": "login_codes_allowed_email_id_allowed_emails_id_fk",
           "tableFrom": "login_codes",
           "tableTo": "allowed_emails",
-          "columnsFrom": [
-            "allowed_email_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["allowed_email_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -313,12 +303,8 @@
           "name": "sessions_user_id_users_id_fk",
           "tableFrom": "sessions",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -328,9 +314,7 @@
         "sessions_refresh_token_hash_unique": {
           "name": "sessions_refresh_token_hash_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "refresh_token_hash"
-          ]
+          "columns": ["refresh_token_hash"]
         }
       },
       "policies": {},
@@ -367,12 +351,8 @@
           "name": "usage_user_id_users_id_fk",
           "tableFrom": "usage",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -380,10 +360,7 @@
       "compositePrimaryKeys": {
         "usage_user_id_period_pk": {
           "name": "usage_user_id_period_pk",
-          "columns": [
-            "user_id",
-            "period"
-          ]
+          "columns": ["user_id", "period"]
         }
       },
       "uniqueConstraints": {},
@@ -458,9 +435,7 @@
         "users_email_unique": {
           "name": "users_email_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "email"
-          ]
+          "columns": ["email"]
         }
       },
       "policies": {},
@@ -472,11 +447,7 @@
     "public.user_status": {
       "name": "user_status",
       "schema": "public",
-      "values": [
-        "pending",
-        "allowed",
-        "blocked"
-      ]
+      "values": ["pending", "allowed", "blocked"]
     }
   },
   "schemas": {},
