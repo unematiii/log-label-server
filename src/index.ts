@@ -1,5 +1,6 @@
 import Fastify from 'fastify';
 
+import { EmailWorker } from './auth/email-worker.js';
 import { closeDatabase, migrateDatabase } from './database/index.js';
 import { routes } from './routes.js';
 
@@ -20,13 +21,17 @@ const fastify = Fastify({
 
 fastify.register(routes);
 
+const emailWorker = new EmailWorker(fastify.log);
+
 fastify.addHook('onClose', async () => {
+  await emailWorker.stop();
   await closeDatabase();
 });
 
 async function start(): Promise<void> {
   try {
     await migrateDatabase();
+    emailWorker.start();
     await fastify.listen({
       port: Number(process.env.PORT ?? 3000),
       host: '0.0.0.0',

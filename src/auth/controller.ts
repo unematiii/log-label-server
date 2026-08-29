@@ -1,12 +1,17 @@
 import { randomInt } from 'node:crypto';
 
-import { and, desc, eq, gt, isNull } from 'drizzle-orm';
+import { and, desc, eq, gt, isNull, sql } from 'drizzle-orm';
 import type { RouteHandler } from 'fastify';
 
 import { db } from '../database/index.js';
-import { allowedEmails, loginCodes, users } from '../database/schema.js';
+import {
+  allowedEmails,
+  emailJobs,
+  loginCodes,
+  users,
+} from '../database/schema.js';
 
-import { hashLoginCode, sendLoginCode } from './email.js';
+import { encryptLoginCode, hashLoginCode } from './email.js';
 import { createTokenPair, rotateRefreshToken } from './tokens.js';
 import type {
   RefreshTokenRoute,
@@ -28,30 +33,43 @@ export const requestLoginCodeController: RouteHandler<
 
   if (allowed) {
     const oneMinuteAgo = new Date(Date.now() - 60_000);
-    const [recent] = await db
-      .select({ id: loginCodes.id })
-      .from(loginCodes)
-      .where(
-        and(
-          eq(loginCodes.allowedEmailId, allowed.id),
-          gt(loginCodes.createdAt, oneMinuteAgo)
-        )
-      )
-      .limit(1);
+    const code = String(randomInt(0, 1_000_000)).padStart(6, '0');
+    const expiresAt = new Date(Date.now() + 5 * 60_000);
 
-    if (!recent) {
-      const code = String(randomInt(0, 1_000_000)).padStart(6, '0');
-      await db.insert(loginCodes).values({
-        allowedEmailId: allowed.id,
-        codeHash: hashLoginCode(email, code),
-        expiresAt: new Date(Date.now() + 5 * 60_000),
+    await db.transaction(async (tx) => {
+      await tx.execute(sql`select pg_advisory_xact_lock(${allowed.id})`);
+
+      const [recent] = await tx
+        .select({ id: loginCodes.id })
+        .from(loginCodes)
+        .where(
+          and(
+            eq(loginCodes.allowedEmailId, allowed.id),
+            gt(loginCodes.createdAt, oneMinuteAgo)
+          )
+        )
+        .limit(1);
+
+      if (recent) return;
+
+      const [loginCode] = await tx
+        .insert(loginCodes)
+        .values({
+          allowedEmailId: allowed.id,
+          codeHash: hashLoginCode(email, code),
+          expiresAt,
+        })
+        .returning({ id: loginCodes.id });
+
+      if (!loginCode) throw new Error('Could not create login code');
+
+      await tx.insert(emailJobs).values({
+        loginCodeId: loginCode.id,
+        recipient: email,
+        encryptedCode: encryptLoginCode(code),
+        expiresAt,
       });
-      try {
-        await sendLoginCode(email, code);
-      } catch (error) {
-        request.log.error({ err: error }, 'Could not send login code');
-      }
-    }
+    });
   }
 
   return reply

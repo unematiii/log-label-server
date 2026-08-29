@@ -59,6 +59,29 @@ export const loginCodes = pgTable(
   ]
 );
 
+export const emailJobs = pgTable(
+  'email_jobs',
+  {
+    id: serial('id').primaryKey(),
+    loginCodeId: integer('login_code_id')
+      .notNull()
+      .references(() => loginCodes.id, { onDelete: 'cascade' }),
+    recipient: text('recipient').notNull(),
+    encryptedCode: text('encrypted_code').notNull(),
+    attemptCount: integer('attempt_count').notNull().default(0),
+    nextAttemptAt: timestamp('next_attempt_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    lockedAt: timestamp('locked_at', { withTimezone: true }),
+    lastError: text('last_error'),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    createdAt: createdTimestamp('created_at'),
+  },
+  (table) => [
+    index('email_jobs_pending_idx').on(table.nextAttemptAt, table.attemptCount),
+  ]
+);
+
 export const sessions = pgTable(
   'sessions',
   {
