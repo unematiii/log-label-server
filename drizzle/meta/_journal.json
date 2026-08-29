@@ -5,22 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1787943988117,
-      "tag": "0000_slim_captain_america",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1787945922757,
-      "tag": "0001_careful_dark_phoenix",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1787995517918,
-      "tag": "0002_same_magdalene",
+      "when": 1787996585083,
+      "tag": "0000_nappy_silverclaw",
       "breakpoints": true
     }
   ]
